@@ -16,7 +16,8 @@ setlocal EnableDelayedExpansion
 ::   5. Sets DevicePasswordLessBuildVersion to 0 (re-enables normal
 ::      password sign-in / auto-logon support)
 ::   6. Turns off Notifications + the two "suggestions/tips" toggles
-::   7. Sets the time zone
+::   7. Turns on automatic time zone detection (locations span
+::      multiple zones, so this is location-based, not hardcoded)
 ::   8. Opens netplwiz for the one step that still needs a click
 ::      (Windows won't let a script silently uncheck that box or
 ::      type an account password for you)
@@ -33,7 +34,6 @@ setlocal EnableDelayedExpansion
 :: ==================================================================
 
 :: --- EDIT ME: tune these for this PC's site/schedule ---
-set TIMEZONE=Eastern Standard Time
 set INSTALL_HOUR=4
 set ACTIVE_HOURS_START=9
 set ACTIVE_HOURS_END=1
@@ -162,9 +162,14 @@ reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" 
 
 echo.
 echo ===============================================
-echo  Step 8: Setting time zone to %TIMEZONE%
+echo  Step 8: Time zone - set automatically by location
 echo ===============================================
-tzutil /s "%TIMEZONE%"
+:: This fleet spans multiple time zones, so instead of a single
+:: hardcoded value in this shared script, each PC works out its own
+:: correct zone using Windows location services.
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" /v Value /t REG_SZ /d Allow /f
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\tzautoupdate" /v Start /t REG_DWORD /d 3 /f
+sc start tzautoupdate >nul 2>&1
 
 echo.
 echo ===============================================
