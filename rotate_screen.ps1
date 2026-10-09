@@ -1,5 +1,6 @@
 # Rotate Screen - rotates the primary display 90 degrees clockwise each time it runs.
 # Writes what it did (and any error) to rotate.log next to this script.
+# NOTE: a real null device name must be passed as [NullString]::Value - PowerShell turns $null into "" for string parameters, which makes the display APIs fail.
 $log = Join-Path $PSScriptRoot "rotate.log"
 function Log($m) { "$(Get-Date -Format s)  $m" | Out-File -FilePath $log -Append -Encoding ascii }
 
@@ -61,7 +62,7 @@ $primary = $null
 for ($i = 0; $i -lt 16; $i++) {
     $dd = New-Object DisplayRotation+DISPLAY_DEVICE
     $dd.cb = [System.Runtime.InteropServices.Marshal]::SizeOf($dd)
-    if (-not [DisplayRotation]::EnumDisplayDevices($null, $i, [ref]$dd, 0)) { break }
+    if (-not [DisplayRotation]::EnumDisplayDevices([NullString]::Value, $i, [ref]$dd, 0)) { break }
     Log "Display $i : $($dd.DeviceName) flags=$($dd.StateFlags) $($dd.DeviceString)"
     if (($dd.StateFlags -band 4) -and -not $primary) { $primary = $dd.DeviceName }
 }
@@ -90,8 +91,8 @@ if ($primary) {
     $attempts += ,@($primary, 1, "named display, save to registry")
     $attempts += ,@($primary, 0, "named display, this session only")
 }
-$attempts += ,@($null, 1, "default display, save to registry")
-$attempts += ,@($null, 0, "default display, this session only")
+$attempts += ,@([NullString]::Value, 1, "default display, save to registry")
+$attempts += ,@([NullString]::Value, 0, "default display, this session only")
 
 foreach ($a in $attempts) {
     $res = Try-Rotate $a[0] $a[1] $a[2]
