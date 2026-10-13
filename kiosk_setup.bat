@@ -20,7 +20,8 @@ setlocal EnableDelayedExpansion
 ::      multiple zones, so this is location-based, not hardcoded)
 ::   8. Opens netplwiz for the one step that still needs a click
 ::      (Windows won't let a script silently uncheck that box or
-::      type an account password for you)
+::      type an account password for you). Also opens the Smart App
+::      Control settings page if that feature is still switched on.
 ::   9. Drops an "Update PC Kiosk Settings" desktop icon that re-runs
 ::      the latest version of this script straight from SCRIPT_URL -
 ::      future changes just mean editing that file on GitHub and
@@ -160,6 +161,13 @@ reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\PushNotifications" /v To
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338389Enabled /t REG_DWORD /d 0 /f
 
 :: "Suggest ways I can finish setting up my device to get the most out of Windows"
+:: This is the toggle behind the full-screen "Let's finish setting up your PC" page.
+reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\UserProfileEngagement" /v ScoobeSystemSettingEnabled /t REG_DWORD /d 0 /f
+
+:: "Show me the Windows welcome experience after updates and when I sign in"
+reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-310093Enabled /t REG_DWORD /d 0 /f
+
+:: Lock screen tips (kept from the earlier version of this script)
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338387Enabled /t REG_DWORD /d 0 /f
 
 echo.
@@ -188,6 +196,41 @@ echo     3. Enter this account's username and password when prompted,
 echo        click OK, then OK again
 echo.
 start netplwiz
+
+echo.
+echo ===============================================
+echo  Step 9b: Smart App Control (manual click)
+echo ===============================================
+:: Smart App Control can only be switched off safely from the Windows
+:: Security UI (editing its registry value is unsupported and can leave
+:: Windows blocking most apps), so this step only READS the current state
+:: and, if it is still on, opens the right page with instructions.
+:: 0x0 = off, 0x1 = on, 0x2 = evaluation mode. No value = not present.
+set "SAC_STATE="
+for /f "tokens=3" %%A in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v VerifiedAndReputablePolicyState 2^>nul ^| find "VerifiedAndReputablePolicyState"') do set "SAC_STATE=%%A"
+
+if not defined SAC_STATE goto :sac_not_present
+if /i "!SAC_STATE!"=="0x0" goto :sac_already_off
+
+echo   Smart App Control is still on and can block game software from
+echo   installing. Turning it off is a one-way switch, which is fine
+echo   for a kiosk. A Windows Security page is opening - then:
+echo.
+echo     1. Click "Smart App Control settings"
+echo     2. Choose "Off"
+echo     3. Close the window
+echo.
+start windowsdefender://appbrowser
+goto :sac_done
+
+:sac_already_off
+echo   Smart App Control is already off - nothing to do.
+goto :sac_done
+
+:sac_not_present
+echo   Smart App Control is not present on this PC - nothing to do.
+
+:sac_done
 
 echo.
 echo ===============================================
