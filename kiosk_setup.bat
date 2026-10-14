@@ -16,6 +16,7 @@ setlocal EnableDelayedExpansion
 ::   5. Sets DevicePasswordLessBuildVersion to 0 (re-enables normal
 ::      password sign-in / auto-logon support)
 ::   6. Turns off Notifications + the two "suggestions/tips" toggles
+::   6b. Disables the left/right Windows keys (Scancode Map, after restart)
 ::   7. Turns on automatic time zone detection (locations span
 ::      multiple zones, so this is location-based, not hardcoded)
 ::   8. Opens netplwiz for the one step that still needs a click
@@ -169,6 +170,19 @@ reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" 
 
 :: Lock screen tips (kept from the earlier version of this script)
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338387Enabled /t REG_DWORD /d 0 /f
+
+echo.
+echo ===============================================
+echo  Step 7b: Disabling the left and right Windows keys
+echo ===============================================
+:: Scancode Map (binary, machine-wide, applies at next restart):
+::   8 header bytes, entry count 3 (2 remaps + terminator), then
+::   0000 E05B (left Win key becomes nothing), 0000 E05C (right Win key
+::   becomes nothing), then a 4-byte null terminator.
+:: To undo: delete the "Scancode Map" value under
+:: HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout and restart.
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout" /v "Scancode Map" /t REG_BINARY /d 00000000000000000300000000005be000005ce000000000 /f
+echo   Windows keys will be disabled after the next restart.
 
 echo.
 echo ===============================================
